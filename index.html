@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI NPC 全智能对话版（自然聊天）</title>
+    <title>AI NPC 适配Doubao-Seed-1.8模型</title>
     <style>
         * {margin:0;padding:0;box-sizing: border-box;font-family: "微软雅黑", sans-serif;}
         body {background: #1d2939;padding: 20px;color:#fff;}
@@ -33,10 +33,13 @@
 <body>
     <div class="game-box">
         <div class="api-tip">
-            📌 全智能对话版 | 自然聊天 | 无固定前缀/口头禅 | 贴合NPC人设
+            📌 适配Doubao-Seed-1.8模型 | 支持图文输入
         </div>
         <div class="input-box" style="margin-bottom:15px;">
-            <input type="text" id="apiKeyInput" placeholder="请输入你的火山方舟API-KEY（免费获取）" style="flex:1;">
+            <input type="text" id="apiKeyInput" placeholder="请输入你的火山方舟API-KEY" style="flex:1;">
+        </div>
+        <div class="input-box" style="margin-bottom:15px;">
+            <input type="text" id="imgUrlInput" placeholder="粘贴图片链接（可选）" style="flex:1;">
         </div>
         <div class="npc-select">
             <button onclick="changeNPC('liya')">✅ 绿洲之城 - 莉娅(采集/炼金·温柔)</button>
@@ -51,7 +54,7 @@
             <div class="dialog-item npc-dialog">你好呀～我是莉娅，有什么想问我的都可以说哦✨</div>
         </div>
         <div class="input-box">
-            <input type="text" id="playerInput" placeholder="在这里输入你想对NPC说的话，比如：哪里采集药草？、挖矿能出什么矿石？、哥布林怎么打？">
+            <input type="text" id="playerInput" placeholder="输入你的问题，比如：哪里采集药草？">
             <button id="sendBtn" onclick="sendMsg()">发送对话</button>
         </div>
         <div class="func-panel">
@@ -82,31 +85,32 @@
         const NPC_CONFIG = {
             liya:{
                 name:"绿洲之城 - 莉娅",
-                personality:"活泼温柔、热心肠，说话带～语气词，可爱亲切",
-                specialty:"采集各种药草、制作疗伤药水、辨识稀有草药",
+                personality:"活泼温柔、热心肠，说话带～语气词",
+                specialty:"采集药草、炼金",
                 mantra:"呀，这个药草超稀有呢！",
-                buff:{name:"采集幸运",effect:"稀有药草概率+30%，采集经验翻倍",duration:120},
-                buffKeys:["采集","药草","炼金","草药","药水"]
+                buff:{name:"采集幸运",effect:"稀有药草概率+30%",duration:120},
+                buffKeys:["采集","药草","炼金"]
             },
             senen:{
                 name:"绿叶精灵城 - 森恩",
-                personality:"粗犷直爽、讲义气，说话带！语气词，豪爽",
-                specialty:"挖掘各种矿石、锻造武器装备、辨识矿脉位置",
+                personality:"粗犷直爽，说话带！语气词",
+                specialty:"挖矿、锻造",
                 mantra:"好矿！锻出来的装备肯定顶！",
-                buff:{name:"挖矿暴击",effect:"矿石数量×2，挖矿经验翻倍",duration:120},
-                buffKeys:["挖矿","矿石","锻造","矿洞","装备"]
+                buff:{name:"挖矿暴击",effect:"矿石数量×2",duration:120},
+                buffKeys:["挖矿","矿石","锻造"]
             },
             huoke:{
                 name:"边境小镇 - 霍克",
-                personality:"沉默寡言、沉稳可靠，说话带。语气词，冷静",
-                specialty:"狩猎怪物、传授战斗技巧、辨识怪物弱点",
+                personality:"沉稳可靠，说话带。语气词",
+                specialty:"战斗、狩猎",
                 mantra:"记住，怪物的弱点永远在破绽处。",
-                buff:{name:"弱点翻倍",effect:"怪物弱点伤害×2，战斗经验翻倍",duration:120},
-                buffKeys:["战斗","打怪","哥布林","史莱姆","弱点","狩猎"]
+                buff:{name:"弱点翻倍",effect:"伤害×2",duration:120},
+                buffKeys:["战斗","打怪","弱点"]
             }
         };
         let currentNPC = "liya";let buffTimer = null;
-        const API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+        // 适配Doubao-Seed-1.8的Responses模式接口地址
+        const API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
 
         function updateStatus(){
             document.getElementById("herbNum").innerText=playerData.herb;
@@ -128,7 +132,7 @@
             let dialogBox = document.getElementById("dialogBox");
             let dialogItem = document.createElement("div");
             dialogItem.className = isPlayer ? "dialog-item player-dialog" : "dialog-item npc-dialog";
-            dialogItem.innerText = content || "（NPC歪头思考中...）";
+            dialogItem.innerText = content || "（NPC思考中...）";
             dialogBox.appendChild(dialogItem);
             dialogBox.scrollTop = dialogBox.scrollHeight;
         }
@@ -149,57 +153,44 @@
                     clearInterval(buffTimer);
                     playerData.buff.active = false;
                     updateStatus();
-                    addDialog(`【系统】你的「${buffCfg.name}」BUFF失效啦，可以再找NPC聊一聊重新获得哦～`,false);
+                    addDialog(`【系统】你的「${buffCfg.name}」BUFF失效啦～`,false);
                 }
             },1000);
         }
 
-        function addMemory(keyword){
-            if(!playerData.memory.includes(keyword) && keyword.length>1){
-                playerData.memory.push(keyword);
-                if(playerData.memory.length>playerData.memoryMax){
-                    playerData.memory.shift();
-                }
-            }
-        }
-
-        // ===== 核心升级：全智能对话逻辑 =====
         async function sendMsg() {
-            let inputDom = document.getElementById("playerInput");
             let apiKey = document.getElementById("apiKeyInput").value.trim();
-            let playerMsg = inputDom.value.trim();
+            let playerMsg = document.getElementById("playerInput").value.trim();
+            let imgUrl = document.getElementById("imgUrlInput").value.trim();
             
             if(!playerMsg) {
-                addDialog("【提示】请输入你想对NPC说的话～", false);
+                addDialog("【提示】请输入你的问题～", false);
                 return;
             }
             if(!apiKey) {
-                addDialog("【提示】请先输入你的火山方舟API-KEY（免费注册获取）", false);
+                addDialog("【提示】请先输入API-KEY～", false);
                 return;
             }
 
             addDialog(playerMsg, true);
-            inputDom.value = "";
+            document.getElementById("playerInput").value = "";
             addDialog("【NPC正在思考...】", false);
 
             let npc = NPC_CONFIG[currentNPC];
-            // ✅ 终极Prompt：让AI完全自主生成，只约束人设，不约束内容
-            let prompt = `
-                角色：你是游戏里的NPC【${npc.name}】，必须严格符合以下人设：
-                1. 性格：${npc.personality}
-                2. 擅长：${npc.specialty}
-                3. 口头禅：${npc.mantra}（仅在聊到对应话题时自然说，不是每句都加）
-                
-                玩家现在对你说：${playerMsg}
-                
-                回复要求：
-                1. 完全贴合${npc.name}的性格和语气，不用加任何前缀（比如【小提示】）；
-                2. 根据玩家的提问内容针对性回复，玩家问什么答什么，不答非所问；
-                3. 口语化、自然，像真实NPC聊天，不要生硬；
-                4. 长度1-3句话，不要太长；
-                5. 只回复NPC的话，不要加任何额外说明；
-                6. 玩家之前聊过的话题：${playerData.memory.join("、")}，可适当呼应但不重复。
-            `.trim();
+            // 构建多模态输入内容
+            let content = [
+                {
+                    "type": "input_text",
+                    "text": `你是游戏NPC【${npc.name}】，性格${npc.personality}，擅长${npc.specialty}。玩家问：${playerMsg}。回复要贴合人设，1-3句话，自然口语化，口头禅仅在对应话题时加。`
+                }
+            ];
+            // 如果有图片链接，添加图片输入
+            if(imgUrl) {
+                content.unshift({
+                    "type": "input_image",
+                    "image_url": imgUrl
+                });
+            }
 
             try {
                 const response = await fetch(API_URL, {
@@ -208,37 +199,32 @@
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${apiKey}`,
                         "Accept": "*/*",
-                        "Accept-Encoding": "gzip, deflate, br",
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                     },
                     body: JSON.stringify({
-                        model: "doubao-multimodal-pro",
-                        messages: [{role: "user", content: prompt}],
-                        temperature: 1.0, // ✅ 最高随机性，回复更丰富
-                        max_tokens: 300
+                        model: "doubao-seed-1-8-251228", // 你的模型ID
+                        input: [
+                            {
+                                "role": "user",
+                                "content": content
+                            }
+                        ]
                     })
                 });
 
                 if(!response.ok) throw new Error(`接口状态码：${response.status}`);
                 const result = await response.json();
-                
-                // ✅ 安全解析AI回复，无兜底库（完全靠AI生成）
-                let finalReply = "";
-                if(result && result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content){
-                    finalReply = result.choices[0].message.content.trim();
+                // Doubao-Seed模型的回复字段是answer
+                let finalReply = result.answer || `我不太清楚你说的呢～${npc.mantra}`;
+                // 自然拼接口头禅
+                if(!finalReply.includes(npc.mantra) && playerMsg.includes(npc.buffKeys[0])){
+                    finalReply += " " + npc.mantra;
                 }
-                // 极端情况AI返回为空时的兜底
-                if(!finalReply) finalReply = `我不太清楚你说的呢～${npc.mantra}`;
 
-                // 移除加载提示，显示自然回复
                 document.getElementById("dialogBox").lastChild.remove();
                 addDialog(finalReply, false);
 
-                // 提取关键词，更新记忆
-                const keywords = playerMsg.split(/[，。！？、\s]/).filter(word => word.length>1);
-                keywords.forEach(key => addMemory(key));
-
-                // 触发BUFF逻辑
+                // 触发BUFF
                 let matchKey = npc.buffKeys.find(key => playerMsg.includes(key));
                 if(matchKey){
                     addBuff(npc.buff);
@@ -248,27 +234,25 @@
 
             } catch (error) {
                 document.getElementById("dialogBox").lastChild.remove();
-                addDialog(`哎呀，我有点没听清你说什么～${npc.mantra}`, false);
-                console.log("对话错误：", error);
+                const errorReplies = [
+                    `咦，刚才好像卡了一下～你再说一遍好不好呀？`,
+                    `抱歉哦，我刚才没听清～能再跟我说一次吗？`
+                ];
+                const randomIdx = Math.floor(Math.random() * errorReplies.length);
+                addDialog(errorReplies[randomIdx], false);
+                console.log("错误：", error);
             }
         }
 
         function doCollect(){
             let herbNum = 1;
             let expNum = 5;
-            let isRare = false;
             if(playerData.buff.active && playerData.buff.name === "采集幸运"){
                 herbNum = 2;
                 expNum = 10;
-                if(Math.random() < 0.3){
-                    isRare = true;
-                    herbNum += 1;
-                    expNum += 20;
-                    addDialog(`【采集】✨ 哇！触发稀有药草！获得×${herbNum}药草，额外经验+20！`,false);
-                }
-            }
-            if(!isRare){
-                addDialog(`【采集】你在晨曦森林采集到了×${herbNum}株薄荷草，经验+${expNum}～`,false);
+                addDialog(`【采集】✨ 触发稀有药草！获得×${herbNum}药草，经验+${expNum}！`,false);
+            }else{
+                addDialog(`【采集】你采集到了×${herbNum}株薄荷草，经验+${expNum}～`,false);
             }
             playerData.herb += herbNum;
             playerData.exp += expNum;
@@ -281,9 +265,9 @@
             if(playerData.buff.active && playerData.buff.name === "挖矿暴击"){
                 oreNum = 2;
                 expNum = 10;
-                addDialog(`【挖矿】💥 挖矿暴击！挖到了×${oreNum}块铁矿，经验+${expNum}！`,false);
+                addDialog(`【挖矿】💥 挖矿暴击！获得×${oreNum}块铁矿，经验+${expNum}！`,false);
             }else{
-                addDialog(`【挖矿】你在黑石山矿洞挖到了×${oreNum}块铜矿，经验+${expNum}～`,false);
+                addDialog(`【挖矿】你挖到了×${oreNum}块铜矿，经验+${expNum}～`,false);
             }
             playerData.ore += oreNum;
             playerData.exp += expNum;
@@ -292,11 +276,11 @@
 
         function doFight(){
             let expNum = 10;
-            const monsters = ["哥布林","史莱姆","兽人小兵","野猪"];
+            const monsters = ["哥布林","史莱姆","兽人小兵"];
             const randomMonster = monsters[Math.floor(Math.random() * monsters.length)];
             if(playerData.buff.active && playerData.buff.name === "弱点翻倍"){
                 expNum = 20;
-                addDialog(`【战斗】⚔️ 精准命中${randomMonster}的弱点！打赢了它，经验+${expNum}！`,false);
+                addDialog(`【战斗】⚔️ 命中${randomMonster}弱点！获得经验+${expNum}！`,false);
             }else{
                 addDialog(`【战斗】你击败了${randomMonster}，获得经验+${expNum}～`,false);
             }
@@ -310,12 +294,7 @@
             document.getElementById("npcInfo").innerHTML = 
                 `<b>当前NPC：</b>${npc.name}<br>
                 <b>性格：</b>${npc.personality} | <b>擅长：</b>${npc.specialty} | <b>口头禅：</b>${npc.mantra}`;
-            const welcomeWords = {
-                liya: `你切换到了【${npc.name}】，我超懂药草的，有什么想问的都可以说哦～`,
-                senen: `你切换到了【${npc.name}】，挖矿锻造我最在行，尽管问！`,
-                huoke: `你切换到了【${npc.name}】，战斗的事，问我就对了。`
-            };
-            addDialog(welcomeWords[npcKey] || `你切换到了【${npc.name}】，有什么问题都可以问我哦～`,false);
+            addDialog(`你切换到了【${npc.name}】，有什么问题都可以问我哦～`,false);
             playerData.memory = [];
         }
 
