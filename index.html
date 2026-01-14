@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YPY冒险游戏 - AI NPC灵汐对话（火山方舟适配版）</title>
+    <title>YPY冒险游戏 - AI NPC灵汐对话（最终完美版）</title>
     <style>
         body {
             font-family: "微软雅黑", sans-serif;
@@ -134,16 +134,21 @@
             background-color: #2a2a40;
             color: #fff;
             cursor: pointer;
+            font-weight: 600;
         }
-        #mode-btn.active {
+        #mode-btn.ai-mode {
             background-color: #4cc9f0;
             color: #1a1a2e;
+        }
+        #mode-btn.local-mode {
+            background-color: #2a2a40;
+            color: #fff;
         }
     </style>
 </head>
 <body>
     <div class="npc-info">
-        <img src="https://via.placeholder.com/80" alt="NPC头像" class="npc-avatar">
+        <img src="https://picsum.photos/80" alt="NPC头像" class="npc-avatar">
         <h2 class="npc-name">灵汐</h2>
         <p class="npc-desc">异世界的向导精灵，熟悉森林与遗迹的秘密，性格温和但警惕陌生人</p>
     </div>
@@ -158,13 +163,13 @@
     </div>
 
     <div class="api-config">
-        <input type="password" id="api-key-input" placeholder="请输入你的火山方舟API密钥（输入后自动保存）">
+        <input type="password" id="api-key-input" placeholder="请输入你的火山方舟API密钥（自动保存）">
         <button id="save-key-btn">保存密钥</button>
     </div>
     <div class="tip-text" id="tip-text"></div>
 
     <div class="mode-switch">
-        <button id="mode-btn" class="active">当前模式：本地测试</button>
+        <button id="mode-btn" class="local-mode">🔴 当前模式：本地测试（仅关键词回复）</button>
     </div>
 
     <script>
@@ -179,14 +184,14 @@
                 "宝藏": "宝藏？那可是需要勇气和智慧才能拿到的，你准备好了吗？"
             },
             defaultReply: "嗯... 我不太明白你的意思呢，可以换个说法吗？"
-        }
-        // ========== 已按你的Curl修改：火山方舟 专属配置 ==========
+        };
+
         const AI_API_CONFIG = {
             apiKey: "",
-            apiUrl: "https://ark.cn-beijing.volces.com/api/v3/responses", // 你的接口地址固定死
-            model: "doubao-seed-1-8-251228", // 你的模型名称固定死
+            apiUrl: "https://ark.cn-beijing.volces.com/api/v3/responses",
+            model: "doubao-seed-1-8-251228",
             prompt: `你是异世界冒险游戏中的精灵NPC灵汐，性格温和、熟悉森林知识，说话语气可爱，会主动给旅行者提供冒险建议，不要说现代网络用语，回复控制在80字以内，语气亲切自然。`
-        }
+        };
 
         // ========== 全局状态 ==========
         let isLocalMode = true;
@@ -198,15 +203,16 @@
         const saveKeyBtn = document.getElementById("save-key-btn");
         const tipText = document.getElementById("tip-text");
 
-        // ========== 页面加载自动读取保存的密钥 ==========
+        // ========== 页面加载自动读取密钥 ==========
         window.onload = function(){
             const savedKey = localStorage.getItem("ai_npc_api_key");
             if(savedKey){
                 apiKeyInput.value = savedKey;
                 AI_API_CONFIG.apiKey = savedKey;
-                tipText.innerText = "✅ 已加载本地保存的火山方舟密钥";
+                tipText.innerText = "✅ 已加载本地保存的密钥，可直接使用AI模式";
+                console.log("【初始化】已加载本地缓存的API密钥");
             }
-        }
+        };
 
         // ========== 工具函数 ==========
         function addMessage(content, isPlayer) {
@@ -230,24 +236,33 @@
         }
 
         /**
-         * ✅ 核心修复：火山方舟豆包API 专用请求函数 【1:1匹配你的Curl】
-         * 完全按照你给的curl命令编写，格式100%一致，这是解决连接失败的关键！
+         * 核心修复：100%适配你的火山方舟返回格式（output[1].content[0].text）
          */
         async function getAIReply(userInput) {
-            // 校验密钥
             if(!AI_API_CONFIG.apiKey || AI_API_CONFIG.apiKey.trim() === ""){
-                return "⚠️ 请先输入并保存你的火山方舟API密钥再使用AI模式哦！";
+                console.error("【AI请求】失败：API密钥为空");
+                return "⚠️ 请先输入并保存你的火山方舟API密钥！";
             }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
             try {
+                console.log("【AI请求】开始调用火山方舟API，玩家输入：", userInput);
                 const response = await fetch(AI_API_CONFIG.apiUrl, {
                     method: "POST",
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    credentials: 'omit',
+                    keepalive: true,
+                    signal: controller.signal,
                     headers: {
-                        "Content-Type": "application/json", // 与curl一致
-                        "Authorization": `Bearer ${AI_API_CONFIG.apiKey}` // 与curl一致的鉴权方式
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${AI_API_CONFIG.apiKey.trim()}`
                     },
                     body: JSON.stringify({
-                        "model": AI_API_CONFIG.model, // 你的模型名
-                        "input": [ // 与curl完全一致的input数组结构
+                        "model": AI_API_CONFIG.model,
+                        "input": [
                             {
                                 "role": "user",
                                 "content": [
@@ -261,40 +276,65 @@
                     })
                 });
 
-                // 解析火山方舟的返回结果
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error(`【AI请求】HTTP错误，状态码：${response.status}，响应：${errText}`);
+                    if(response.status === 401) return "❌ 密钥无效/过期，请重新输入！";
+                    if(response.status === 403) return "❌ 无权限调用该模型，请检查密钥权限！";
+                    if(response.status === 404) return "❌ 接口地址错误，请核对API URL！";
+                    if(response.status === 500) return "❌ 服务器内部错误，请稍后重试！";
+                    return `❌ 网络请求失败【状态码:${response.status}】`;
+                }
+
                 const data = await response.json();
-                
-                // 【成功返回】精准提取火山方舟的回复内容
-                if (data && data.output && data.output.choices && data.output.choices[0]) {
-                    return data.output.choices[0].content.text.trim() || NPC_CONFIG.defaultReply;
-                }
+                console.log("【AI请求】火山方舟返回的完整数据：", JSON.stringify(data, null, 2));
 
-                // 【接口报错】提取火山方舟的官方错误信息
-                if(data && data.error) {
-                    return `❌ 接口错误：${data.error.message} (错误码:${data.error.code})`;
-                }
+                // ========== 100%适配你的返回格式：output[1].content[0].text ==========
+                let aiReply = "";
+                if (data?.output?.[1]?.content?.[0]?.text) {
+                    aiReply = data.output[1].content[0].text;
+                    console.log("【AI请求】成功解析到回复：", aiReply);
+                } 
+                // 其他格式兜底
+                else if (data?.data?.result) aiReply = data.data.result;
+                else if (data?.output?.choices?.[0]?.content?.text) aiReply = data.output.choices[0].content.text;
+                else if (data?.choices?.[0]?.message?.content) aiReply = data.choices[0].message.content;
+                else if (data?.text) aiReply = data.text;
 
-                return NPC_CONFIG.defaultReply;
+                aiReply = aiReply.trim();
+                return aiReply || NPC_CONFIG.defaultReply;
+
             } catch (error) {
-                console.error("火山方舟API调用失败：", error);
-                return "❌ 火山方舟接口连接失败：检查密钥/网络/跨域设置";
+                clearTimeout(timeoutId);
+                console.error("【AI请求】异常错误：", error);
+                if (error.name === 'AbortError') return "❌ 请求超时：服务器响应过慢，请检查网络！";
+                if (error.name === 'TypeError') return "❌ 跨域未解决/网络断开，请用Live Server打开！";
+                return "❌ 网络请求失败，请检查网络和密钥配置！";
             }
         }
 
-        // ========== 保存密钥方法 ==========
+        // ========== 保存API密钥 ==========
         function saveApiKey(){
-            const key = apiKeyInput.value.trim(); // 自动去除首尾空格，避免密钥错误
+            const key = apiKeyInput.value.trim();
+            console.log("【密钥保存】尝试保存密钥（后4位）：", key.slice(-4));
+            
             if(key === ""){
                 tipText.innerText = "❌ 密钥不能为空，请输入后再保存！";
+                console.error("【密钥保存】失败：密钥为空");
                 return;
             }
+            
             AI_API_CONFIG.apiKey = key;
             localStorage.setItem("ai_npc_api_key", key);
-            tipText.innerText = "✅ 密钥保存成功！可切换AI模式使用啦";
+            tipText.innerText = "✅ 密钥保存成功！可切换AI模式使用";
+            console.log("【密钥保存】成功，已存入本地缓存");
+            
             setTimeout(()=>{tipText.innerText = ""},3000);
         }
 
-        // ========== 发送消息方法 ==========
+        // ========== 发送消息 ==========
         async function sendMessage() {
             const inputContent = playerInput.value.trim();
             if (!inputContent) return;
@@ -302,8 +342,18 @@
             addMessage(inputContent, true);
             playerInput.value = "";
 
-            // 思考中提示，体验更好
-            const loadingMsg = addMessage("灵汐正在思考中...", false);
+            if (isLocalMode) {
+                const input = inputContent.toLowerCase().trim();
+                const hasKeyword = Object.keys(NPC_CONFIG.replyMap).some(keyword => 
+                    input.includes(keyword.toLowerCase())
+                );
+                if (!hasKeyword) {
+                    addMessage("💡 提示：当前是本地模式，仅支持「你好/任务/YPY/再见/宝藏」关键词回复！点击底部按钮切换AI模式可自由聊天~", false);
+                    return;
+                }
+            }
+
+            addMessage("灵汐正在思考中...", false);
 
             let reply = "";
             if (isLocalMode) {
@@ -320,20 +370,27 @@
 
         // ========== 事件监听 ==========
         sendBtn.addEventListener("click", sendMessage);
-        playerInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") sendMessage();
-        });
+        playerInput.addEventListener("keydown", (e) => e.key === "Enter" && sendMessage());
+
         modeBtn.addEventListener("click", () => {
             isLocalMode = !isLocalMode;
-            modeBtn.textContent = isLocalMode 
-                ? "当前模式：本地测试" 
-                : "当前模式：火山方舟AI对话";
-            modeBtn.classList.toggle("active");
+            console.log("【模式切换】成功，当前是否为本地模式：", isLocalMode);
+            
+            if (isLocalMode) {
+                modeBtn.textContent = "🔴 当前模式：本地测试（仅关键词回复）";
+                modeBtn.className = "local-mode";
+                tipText.innerText = "⚠️ 本地模式仅支持「你好/任务/YPY/再见/宝藏」关键词回复";
+            } else {
+                modeBtn.textContent = "🟢 当前模式：火山方舟AI联网对话（自由聊天）";
+                modeBtn.className = "ai-mode";
+                tipText.innerText = "✅ AI模式已激活！请确保已保存密钥，可自由聊天~";
+            }
+            
+            setTimeout(()=>{tipText.innerText = ""}, 5000);
         });
+
         saveKeyBtn.addEventListener("click", saveApiKey);
-        apiKeyInput.addEventListener("keydown",(e)=>{
-            if(e.key === "Enter") saveApiKey();
-        })
+        apiKeyInput.addEventListener("keydown", (e) => e.key === "Enter" && saveApiKey());
     </script>
 </body>
 </html>
