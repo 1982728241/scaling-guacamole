@@ -2,308 +2,329 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI NPC 适配Doubao-Seed-1.8模型</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YPY冒险游戏 - AI NPC对话</title>
     <style>
-        * {margin:0;padding:0;box-sizing: border-box;font-family: "微软雅黑", sans-serif;}
-        body {background: #1d2939;padding: 20px;color:#fff;}
-        .game-box {width: 1000px;margin:0 auto;border: 2px solid #6b7280;border-radius: 8px;background: #111827;padding:15px;}
-        .npc-select {margin-bottom:15px;padding:10px;background:#27272a;border-radius:6px;}
-        .npc-select button {padding:8px 15px;margin:0 5px;border:none;border-radius:4px;background:#3b82f6;color:#fff;cursor:pointer;}
-        .npc-select button:hover {background:#2563eb;}
-        .npc-info {padding:10px;background:#0f172a;border-radius:6px;margin-bottom:15px;line-height:1.8;}
-        .dialog-box {width:100%;height:350px;border:1px solid #6b7280;border-radius:6px;padding:10px;background:#030712;overflow-y:auto;margin-bottom:15px;}
-        .dialog-item {margin-bottom:10px;padding:8px;border-radius:6px;max-width:90%;}
-        .player-dialog {background:#3b82f6;margin-left:auto;text-align:right;}
-        .npc-dialog {background:#4b5563;margin-right:auto;text-align:left;}
-        .api-tip {padding:10px;background:#f59e0b;border-radius:6px;margin-bottom:15px;color:#111;}
-        .input-box {display:flex;gap:10px;margin-bottom:15px;}
-        #playerInput {flex:1;padding:10px;border:1px solid #6b7280;border-radius:6px;background:#1f2937;color:#fff;font-size:16px;outline:none;}
-        #sendBtn {padding:0 20px;border:none;border-radius:6px;background:#10b981;color:#fff;cursor:pointer;font-size:16px;}
-        #sendBtn:hover {background:#059669;}
-        .func-panel {display:flex;gap:10px;margin-bottom:15px;}
-        .func-panel button {flex:1;padding:12px;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:16px;}
-        #collectBtn {background:#84cc16;}
-        #mineBtn {background:#b45309;}
-        #fightBtn {background:#ef4444;}
-        .status-panel {display:flex;gap:15px;padding:10px;background:#27272a;border-radius:6px;}
-        .status-item {flex:1;line-height:1.8;}
-        b {color:#fbbf24;}
+        /* 游戏整体样式 */
+        body {
+            font-family: "微软雅黑", sans-serif;
+            background-color: #1a1a2e;
+            color: #fff;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        /* NPC信息栏 */
+        .npc-info {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #4cc9f0;
+            padding-bottom: 10px;
+        }
+        .npc-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid #4cc9f0;
+        }
+        .npc-name {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #4cc9f0;
+        }
+        .npc-desc {
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+        /* 对话历史区域 */
+        .dialog-container {
+            height: 400px;
+            border: 2px solid #4cc9f0;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #2a2a40;
+            margin-bottom: 20px;
+        }
+        .dialog-message {
+            margin: 10px 0;
+            max-width: 70%;
+            line-height: 1.5;
+        }
+        /* 玩家消息样式 */
+        .player-msg {
+            margin-left: auto;
+            background-color: #4cc9f0;
+            color: #1a1a2e;
+            padding: 8px 15px;
+            border-radius: 15px 15px 0 15px;
+        }
+        /* NPC消息样式 */
+        .npc-msg {
+            background-color: #4361ee;
+            padding: 8px 15px;
+            border-radius: 15px 15px 15px 0;
+        }
+        /* 输入区域 */
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        #player-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #4cc9f0;
+            border-radius: 25px;
+            background-color: #2a2a40;
+            color: #fff;
+            outline: none;
+        }
+        #send-btn {
+            padding: 12px 25px;
+            background-color: #4cc9f0;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #send-btn:hover {
+            background-color: #3aabd0;
+        }
+        /* ========== 新增：API密钥配置区域样式 ========== */
+        .api-config {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #222238;
+            border-radius: 10px;
+            border: 1px solid #4cc9f0;
+        }
+        #api-key-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #4cc9f0;
+            border-radius: 20px;
+            background-color: #2a2a40;
+            color: #fff;
+            outline: none;
+        }
+        #save-key-btn {
+            padding: 10px 20px;
+            background-color: #4cc9f0;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #save-key-btn:hover {
+            background-color: #3aabd0;
+        }
+        .tip-text {
+            color: #4cc9f0;
+            font-size: 12px;
+            text-align: center;
+            margin: 5px 0;
+            height: 14px;
+        }
+        /* 模式切换 */
+        .mode-switch {
+            text-align: center;
+            margin-top: 5px;
+        }
+        #mode-btn {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 2px solid #4cc9f0;
+            background-color: #2a2a40;
+            color: #fff;
+            cursor: pointer;
+        }
+        #mode-btn.active {
+            background-color: #4cc9f0;
+            color: #1a1a2e;
+        }
     </style>
 </head>
 <body>
-    <div class="game-box">
-        <div class="api-tip">
-            📌 适配Doubao-Seed-1.8模型 | 支持图文输入
-        </div>
-        <div class="input-box" style="margin-bottom:15px;">
-            <input type="text" id="apiKeyInput" placeholder="请输入你的火山方舟API-KEY" style="flex:1;">
-        </div>
-        <div class="input-box" style="margin-bottom:15px;">
-            <input type="text" id="imgUrlInput" placeholder="粘贴图片链接（可选）" style="flex:1;">
-        </div>
-        <div class="npc-select">
-            <button onclick="changeNPC('liya')">✅ 绿洲之城 - 莉娅(采集/炼金·温柔)</button>
-            <button onclick="changeNPC('senen')">⛏️ 绿叶精灵城 - 森恩(挖矿/锻造·粗犷)</button>
-            <button onclick="changeNPC('huoke')">⚔️ 边境小镇 - 霍克(战斗/狩猎·沉稳)</button>
-        </div>
-        <div class="npc-info" id="npcInfo">
-            <b>当前NPC：</b>绿洲之城 - 莉娅<br>
-            <b>性格：</b>活泼温柔 | <b>擅长：</b>采集、炼金 | <b>口头禅：</b>呀，这个药草超稀有呢！
-        </div>
-        <div class="dialog-box" id="dialogBox">
-            <div class="dialog-item npc-dialog">你好呀～我是莉娅，有什么想问我的都可以说哦✨</div>
-        </div>
-        <div class="input-box">
-            <input type="text" id="playerInput" placeholder="输入你的问题，比如：哪里采集药草？">
-            <button id="sendBtn" onclick="sendMsg()">发送对话</button>
-        </div>
-        <div class="func-panel">
-            <button id="collectBtn" onclick="doCollect()">🌿 采集药草</button>
-            <button id="mineBtn" onclick="doMine()">⛰️ 挖掘矿石</button>
-            <button id="fightBtn" onclick="doFight()">⚔️ 战斗打怪</button>
-        </div>
-        <div class="status-panel">
-            <div class="status-item">
-                <b>当前BUFF状态：</b><span id="buffStatus">无BUFF</span><br>
-                <b>BUFF剩余时间：</b><span id="buffTime">0 秒</span>
-            </div>
-            <div class="status-item">
-                <b>绿洲声望：</b><span id="shengwangLiya">0</span><br>
-                <b>绿叶声望：</b><span id="shengwangSenen">0</span><br>
-                <b>边境声望：</b><span id="shengwangHuoke">0</span>
-            </div>
-            <div class="status-item">
-                <b>药草数量：</b><span id="herbNum">0</span><br>
-                <b>矿石数量：</b><span id="oreNum">0</span><br>
-                <b>角色经验：</b><span id="expNum">0</span>
-            </div>
-        </div>
+    <!-- NPC信息展示 -->
+    <div class="npc-info">
+        <img src="https://via.placeholder.com/80" alt="NPC头像" class="npc-avatar">
+        <h2 class="npc-name">灵汐</h2>
+        <p class="npc-desc">异世界的向导精灵，熟悉森林与遗迹的秘密，性格温和但警惕陌生人</p>
+    </div>
+
+    <!-- 对话历史容器 -->
+    <div class="dialog-container" id="dialog-history">
+        <div class="dialog-message npc-msg">你好呀，旅行者！我是灵汐，需要我帮你指引方向吗？</div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="input-area">
+        <input type="text" id="player-input" placeholder="输入你想对灵汐说的话..." autofocus>
+        <button id="send-btn">发送</button>
+    </div>
+
+    <!-- ========== 新增：API密钥输入+保存区域【核心新增】 ========== -->
+    <div class="api-config">
+        <input type="password" id="api-key-input" placeholder="请输入你的AI API密钥（输入后自动保存）">
+        <button id="save-key-btn">保存密钥</button>
+    </div>
+    <div class="tip-text" id="tip-text"></div>
+
+    <!-- 模式切换 -->
+    <div class="mode-switch">
+        <button id="mode-btn" class="active">当前模式：本地测试</button>
     </div>
 
     <script>
-        let playerData = {herb:0,ore:0,exp:0,shengwang:{liya:0,senen:0,huoke:0},buff:{name:"",active:false,time:0,effect:""},memory:[],memoryMax:5};
+        // ========== 核心配置项 ==========
         const NPC_CONFIG = {
-            liya:{
-                name:"绿洲之城 - 莉娅",
-                personality:"活泼温柔、热心肠，说话带～语气词",
-                specialty:"采集药草、炼金",
-                mantra:"呀，这个药草超稀有呢！",
-                buff:{name:"采集幸运",effect:"稀有药草概率+30%",duration:120},
-                buffKeys:["采集","药草","炼金"]
+            name: "灵汐",
+            replyMap: {
+                "你好": "旅行者你好呀~ 第一次来这片森林吗？",
+                "任务": "听说东边的遗迹里藏着古老的宝藏，不过那里有魔物看守哦！",
+                "YPY": "你是说YPY吗？我好像在森林深处见过Ta，Ta当时在和一只巨狼对话呢！",
+                "再见": "一路顺风呀，旅行者！如果遇到危险，记得呼唤我的名字~",
+                "宝藏": "宝藏？那可是需要勇气和智慧才能拿到的，你准备好了吗？"
             },
-            senen:{
-                name:"绿叶精灵城 - 森恩",
-                personality:"粗犷直爽，说话带！语气词",
-                specialty:"挖矿、锻造",
-                mantra:"好矿！锻出来的装备肯定顶！",
-                buff:{name:"挖矿暴击",effect:"矿石数量×2",duration:120},
-                buffKeys:["挖矿","矿石","锻造"]
-            },
-            huoke:{
-                name:"边境小镇 - 霍克",
-                personality:"沉稳可靠，说话带。语气词",
-                specialty:"战斗、狩猎",
-                mantra:"记住，怪物的弱点永远在破绽处。",
-                buff:{name:"弱点翻倍",effect:"伤害×2",duration:120},
-                buffKeys:["战斗","打怪","弱点"]
-            }
-        };
-        let currentNPC = "liya";let buffTimer = null;
-        // 适配Doubao-Seed-1.8的Responses模式接口地址
-        const API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
+            defaultReply: "嗯... 我不太明白你的意思呢，可以换个说法吗？"
+        }
+        // AI API配置 - 密钥改为空，由页面输入，无需改代码
+        const AI_API_CONFIG = {
+            apiKey: "",
+            apiUrl: "你的AI接口地址", // 这里只需要改一次接口地址即可
+            prompt: `你是异世界冒险游戏中的精灵NPC灵汐，性格温和、熟悉森林知识，说话语气可爱，会主动给旅行者提供冒险建议，不要说现代网络用语，回复控制在50字以内。`
+        }
 
-        function updateStatus(){
-            document.getElementById("herbNum").innerText=playerData.herb;
-            document.getElementById("oreNum").innerText=playerData.ore;
-            document.getElementById("expNum").innerText=playerData.exp;
-            document.getElementById("shengwangLiya").innerText=playerData.shengwang.liya;
-            document.getElementById("shengwangSenen").innerText=playerData.shengwang.senen;
-            document.getElementById("shengwangHuoke").innerText=playerData.shengwang.huoke;
-            if(playerData.buff.active){
-                document.getElementById("buffStatus").innerText=playerData.buff.name+" | "+playerData.buff.effect;
-                document.getElementById("buffTime").innerText=playerData.buff.time+" 秒";
-            }else{
-                document.getElementById("buffStatus").innerText="无BUFF";
-                document.getElementById("buffTime").innerText="0 秒";
+        // ========== 全局状态 ==========
+        let isLocalMode = true;
+        const dialogHistory = document.getElementById("dialog-history");
+        const playerInput = document.getElementById("player-input");
+        const sendBtn = document.getElementById("send-btn");
+        const modeBtn = document.getElementById("mode-btn");
+        // ========== 新增：密钥相关DOM ==========
+        const apiKeyInput = document.getElementById("api-key-input");
+        const saveKeyBtn = document.getElementById("save-key-btn");
+        const tipText = document.getElementById("tip-text");
+
+        // ========== 新增：页面加载时自动读取已保存的密钥【无需重复输入】 ==========
+        window.onload = function(){
+            const savedKey = localStorage.getItem("ai_npc_api_key");
+            if(savedKey){
+                apiKeyInput.value = savedKey;
+                AI_API_CONFIG.apiKey = savedKey;
+                tipText.innerText = "✅ 已加载本地保存的密钥";
             }
         }
 
-        function addDialog(content,isPlayer){
-            let dialogBox = document.getElementById("dialogBox");
-            let dialogItem = document.createElement("div");
-            dialogItem.className = isPlayer ? "dialog-item player-dialog" : "dialog-item npc-dialog";
-            dialogItem.innerText = content || "（NPC思考中...）";
-            dialogBox.appendChild(dialogItem);
-            dialogBox.scrollTop = dialogBox.scrollHeight;
+        // ========== 工具函数 ==========
+        function addMessage(content, isPlayer) {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = isPlayer 
+                ? "dialog-message player-msg" 
+                : "dialog-message npc-msg";
+            msgDiv.textContent = content;
+            dialogHistory.appendChild(msgDiv);
+            dialogHistory.scrollTop = dialogHistory.scrollHeight;
         }
 
-        function addBuff(buffCfg){
-            if(buffTimer) clearInterval(buffTimer);
-            playerData.buff = {
-                name: buffCfg.name,
-                active: true,
-                time: buffCfg.duration,
-                effect: buffCfg.effect
-            };
-            updateStatus();
-            buffTimer = setInterval(()=>{
-                playerData.buff.time--;
-                updateStatus();
-                if(playerData.buff.time <= 0){
-                    clearInterval(buffTimer);
-                    playerData.buff.active = false;
-                    updateStatus();
-                    addDialog(`【系统】你的「${buffCfg.name}」BUFF失效啦～`,false);
+        function getLocalReply(userInput) {
+            const input = userInput.toLowerCase().trim();
+            for (const [keyword, reply] of Object.entries(NPC_CONFIG.replyMap)) {
+                if (input.includes(keyword.toLowerCase())) {
+                    return reply;
                 }
-            },1000);
+            }
+            return NPC_CONFIG.defaultReply;
         }
 
-        async function sendMsg() {
-            let apiKey = document.getElementById("apiKeyInput").value.trim();
-            let playerMsg = document.getElementById("playerInput").value.trim();
-            let imgUrl = document.getElementById("imgUrlInput").value.trim();
-            
-            if(!playerMsg) {
-                addDialog("【提示】请输入你的问题～", false);
-                return;
+        /**
+         * AI API模式：调用真实AI接口获取回复
+         * 已适配 密钥读取+空密钥校验
+         */
+        async function getAIReply(userInput) {
+            // 新增：校验是否有密钥
+            if(!AI_API_CONFIG.apiKey || AI_API_CONFIG.apiKey.trim() === ""){
+                return "⚠️ 请先输入并保存你的AI API密钥再使用AI模式哦！";
             }
-            if(!apiKey) {
-                addDialog("【提示】请先输入API-KEY～", false);
-                return;
-            }
-
-            addDialog(playerMsg, true);
-            document.getElementById("playerInput").value = "";
-            addDialog("【NPC正在思考...】", false);
-
-            let npc = NPC_CONFIG[currentNPC];
-            // 构建多模态输入内容
-            let content = [
-                {
-                    "type": "input_text",
-                    "text": `你是游戏NPC【${npc.name}】，性格${npc.personality}，擅长${npc.specialty}。玩家问：${playerMsg}。回复要贴合人设，1-3句话，自然口语化，口头禅仅在对应话题时加。`
-                }
-            ];
-            // 如果有图片链接，添加图片输入
-            if(imgUrl) {
-                content.unshift({
-                    "type": "input_image",
-                    "image_url": imgUrl
-                });
-            }
-
             try {
-                const response = await fetch(API_URL, {
+                const response = await fetch(AI_API_CONFIG.apiUrl, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${apiKey}`,
-                        "Accept": "*/*",
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                        "Authorization": `Bearer ${AI_API_CONFIG.apiKey}`
                     },
                     body: JSON.stringify({
-                        model: "doubao-seed-1-8-251228", // 你的模型ID
-                        input: [
-                            {
-                                "role": "user",
-                                "content": content
-                            }
-                        ]
+                        prompt: `${AI_API_CONFIG.prompt}\n玩家说：${userInput}\n灵汐回复：`,
+                        max_tokens: 50
                     })
                 });
-
-                if(!response.ok) throw new Error(`接口状态码：${response.status}`);
-                const result = await response.json();
-                // Doubao-Seed模型的回复字段是answer
-                let finalReply = result.answer || `我不太清楚你说的呢～${npc.mantra}`;
-                // 自然拼接口头禅
-                if(!finalReply.includes(npc.mantra) && playerMsg.includes(npc.buffKeys[0])){
-                    finalReply += " " + npc.mantra;
-                }
-
-                document.getElementById("dialogBox").lastChild.remove();
-                addDialog(finalReply, false);
-
-                // 触发BUFF
-                let matchKey = npc.buffKeys.find(key => playerMsg.includes(key));
-                if(matchKey){
-                    addBuff(npc.buff);
-                    playerData.shengwang[currentNPC] += 3;
-                    updateStatus();
-                }
-
+                const data = await response.json();
+                return data.choices[0].text.trim() || NPC_CONFIG.defaultReply;
             } catch (error) {
-                document.getElementById("dialogBox").lastChild.remove();
-                const errorReplies = [
-                    `咦，刚才好像卡了一下～你再说一遍好不好呀？`,
-                    `抱歉哦，我刚才没听清～能再跟我说一次吗？`
-                ];
-                const randomIdx = Math.floor(Math.random() * errorReplies.length);
-                addDialog(errorReplies[randomIdx], false);
-                console.log("错误：", error);
+                console.error("AI接口调用失败：", error);
+                return "❌ 接口连接失败，检查密钥是否正确或网络是否正常~";
             }
         }
 
-        function doCollect(){
-            let herbNum = 1;
-            let expNum = 5;
-            if(playerData.buff.active && playerData.buff.name === "采集幸运"){
-                herbNum = 2;
-                expNum = 10;
-                addDialog(`【采集】✨ 触发稀有药草！获得×${herbNum}药草，经验+${expNum}！`,false);
-            }else{
-                addDialog(`【采集】你采集到了×${herbNum}株薄荷草，经验+${expNum}～`,false);
+        // ========== 新增：保存API密钥核心方法 ==========
+        function saveApiKey(){
+            const key = apiKeyInput.value.trim();
+            if(key === ""){
+                tipText.innerText = "❌ 密钥不能为空，请输入后再保存！";
+                return;
             }
-            playerData.herb += herbNum;
-            playerData.exp += expNum;
-            updateStatus();
+            // 保存到配置项+本地缓存
+            AI_API_CONFIG.apiKey = key;
+            localStorage.setItem("ai_npc_api_key", key);
+            tipText.innerText = "✅ 密钥保存成功！可切换AI模式使用啦";
+            // 3秒后清空提示，更清爽
+            setTimeout(()=>{tipText.innerText = ""},3000);
         }
 
-        function doMine(){
-            let oreNum = 1;
-            let expNum = 5;
-            if(playerData.buff.active && playerData.buff.name === "挖矿暴击"){
-                oreNum = 2;
-                expNum = 10;
-                addDialog(`【挖矿】💥 挖矿暴击！获得×${oreNum}块铁矿，经验+${expNum}！`,false);
-            }else{
-                addDialog(`【挖矿】你挖到了×${oreNum}块铜矿，经验+${expNum}～`,false);
+        // ========== 事件监听 ==========
+        async function sendMessage() {
+            const inputContent = playerInput.value.trim();
+            if (!inputContent) return;
+
+            addMessage(inputContent, true);
+            playerInput.value = "";
+
+            let reply = "";
+            if (isLocalMode) {
+                reply = getLocalReply(inputContent);
+            } else {
+                reply = await getAIReply(inputContent);
             }
-            playerData.ore += oreNum;
-            playerData.exp += expNum;
-            updateStatus();
+
+            setTimeout(() => {
+                addMessage(reply, false);
+            }, 800);
         }
 
-        function doFight(){
-            let expNum = 10;
-            const monsters = ["哥布林","史莱姆","兽人小兵"];
-            const randomMonster = monsters[Math.floor(Math.random() * monsters.length)];
-            if(playerData.buff.active && playerData.buff.name === "弱点翻倍"){
-                expNum = 20;
-                addDialog(`【战斗】⚔️ 命中${randomMonster}弱点！获得经验+${expNum}！`,false);
-            }else{
-                addDialog(`【战斗】你击败了${randomMonster}，获得经验+${expNum}～`,false);
-            }
-            playerData.exp += expNum;
-            updateStatus();
-        }
+        sendBtn.addEventListener("click", sendMessage);
+        playerInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendMessage();
+        });
 
-        function changeNPC(npcKey){
-            currentNPC = npcKey;
-            const npc = NPC_CONFIG[npcKey];
-            document.getElementById("npcInfo").innerHTML = 
-                `<b>当前NPC：</b>${npc.name}<br>
-                <b>性格：</b>${npc.personality} | <b>擅长：</b>${npc.specialty} | <b>口头禅：</b>${npc.mantra}`;
-            addDialog(`你切换到了【${npc.name}】，有什么问题都可以问我哦～`,false);
-            playerData.memory = [];
-        }
+        modeBtn.addEventListener("click", () => {
+            isLocalMode = !isLocalMode;
+            modeBtn.textContent = isLocalMode 
+                ? "当前模式：本地测试" 
+                : "当前模式：AI API对话";
+            modeBtn.classList.toggle("active");
+        });
 
-        window.onload=function(){
-            updateStatus();
-            document.getElementById("playerInput").onkeydown=e=>{
-                if(e.keyCode === 13) sendMsg();
-            };
-        };
+        // ========== 新增：保存密钥按钮事件 ==========
+        saveKeyBtn.addEventListener("click", saveApiKey);
+        // 新增：按回车也能保存密钥，更方便
+        apiKeyInput.addEventListener("keydown",(e)=>{
+            if(e.key === "Enter") saveApiKey();
+        })
     </script>
 </body>
 </html>
